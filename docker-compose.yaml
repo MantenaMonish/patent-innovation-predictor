@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    environment:
+      - IS_PERSISTENT=true
+      - ANONYMIZED_TELEMETRY=false
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb-data:/chroma/chroma
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  chromadb-data:
+    driver: local
+  ollama-data:
+    driver: local
