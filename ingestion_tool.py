@@ -55,19 +55,33 @@ def load_patent_data(dir_path:str):
 
 def index_patent_data(collection, patent_data:list):
     '''
-    Index patent data into chromadb.
+    Upsert patent data into chromadb.
+    Skips patents that are already indexed (by patent_id).
+    Adds only new patents, preserving all existing data.
     '''
+    # Get all IDs already in the collection
+    existing_ids = set()
+    if collection.count() > 0:
+        existing = collection.get(include=[])  # fetch IDs only, no vectors
+        existing_ids = set(existing["ids"])
+        print(f"Collection already has {len(existing_ids)} patents indexed.")
+
     ids = []
     embeddings = []
     documents = []
     metadatas = []
-    
+    skipped = 0
+
     for patent in patent_data:
         patent_id = str(patent.get("patent_id") or uuid.uuid4())
+
+        if patent_id in existing_ids:
+            skipped += 1
+            continue
+
         ids.append(patent_id)
         embeddings.append(patent["embedding"])
         documents.append(patent["abstract"])
-
         metadatas.append({
             "title":patent.get("title") or "",
             "pdf":patent.get("pdf") or "",
@@ -76,14 +90,21 @@ def index_patent_data(collection, patent_data:list):
             "token_count":patent.get("token_count",0)
         })
 
+    if skipped > 0:
+        print(f"Skipped {skipped} patents already in the collection.")
+
+    if not ids:
+        print("No new patents to index — collection is already up to date.")
+        return
+
     collection.add(
-        ids = ids,
-        embeddings = embeddings,
-        documents = documents,
-        metadatas = metadatas
+        ids=ids,
+        embeddings=embeddings,
+        documents=documents,
+        metadatas=metadatas
     )
 
-    print(f"Indexed {len(patent_data)} patents into {collection.name} collection.")
+    print(f"Indexed {len(ids)} new patents into '{collection.name}'. Total now: {collection.count()}.")
 
 if __name__ == "__main__":
     dir_path = "files"

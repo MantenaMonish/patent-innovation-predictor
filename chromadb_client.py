@@ -21,26 +21,26 @@ def create_chromadb_client(host, port):
 
 def create_collection_if_not_exists(client, collection_name: str):
     '''
-    Create Chromadb collection with cosine similarity if it doesn't exist.
+    Get existing Chromadb collection or create it with cosine similarity.
+    Preserves all existing indexed patents — never deletes data.
 
     Args:
         client: Chromadb client instance
-        collection_name: Name of the collection to create
+        collection_name: Name of the collection to get or create
     '''
-    existing = [col.name for col in client.list_collections()]
-
-    if collection_name in existing:
-        print(f"Deleting existing collection {collection_name}")
-        client.delete_collection(name=collection_name)
-    
-    collection = client.create_collection(
+    collection = client.get_or_create_collection(
         name=collection_name,
         metadata={
             "hnsw:space": "cosine"
         }
     )
 
-    print(f"Created Collection '{collection_name}'")
+    count = collection.count()
+    if count > 0:
+        print(f"Found existing collection '{collection_name}' with {count} patents — preserving data.")
+    else:
+        print(f"Created new collection '{collection_name}'.")
+
     return collection
 
 if __name__ == "__main__":
